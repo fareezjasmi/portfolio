@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pixel Forge: architecture and decisions · Mohamad Fareez Bin Jasmi</title>
+<meta name="description" content="Pixel Forge turns a game idea into a playable Three.js game with a team of AI agents. Target AWS architecture on ECS Fargate, SQS, DynamoDB, S3 and CloudFront, with a sandboxed builder for AI-written code.">
+<meta name="author" content="Mohamad Fareez Bin Jasmi">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f7f7f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1112" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://fareezjasmi.github.io/portfolio/pixel-forge.html">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://fareezjasmi.github.io/portfolio/pixel-forge.html">
+<meta property="og:title" content="Pixel Forge: architecture and decisions">
+<meta property="og:description" content="A team of AI agents that turns a game idea into a playable Three.js game, designed for ECS Fargate, SQS, DynamoDB, S3 and CloudFront.">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="v-b">
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="wrap"><nav class="nav" aria-label="Primary"><a class="home" href="./">Fareez Jasmi</a><a href="./#cloud">Cloud</a><a href="./#mobile">Mobile</a><a href="./#learning">Learning</a><a href="./#contact">Contact</a></nav></div>
+</header>
+<main id="main" class="wrap casestudy">
+<section class="hero" aria-labelledby="title">
+    <p class="eyebrow page-top">case study <span class="tag wip">in progress</span></p>
+    <h1 id="title" class="flush">Pixel Forge</h1>
+    <p class="lede">A team of AI agents that turns a one-paragraph game idea into a playable Three.js game, with every step streamed live to the browser.</p>
+    <dl class="spec">
+      <dt>Status</dt><dd>In progress. Milestones M0 and M1 (application seams and local stand-ins for every AWS service) are merged. M2 (Terraform) and M3 (GitHub Actions deploy) are next.</dd>
+      <dt>Backend</dt><dd>FastAPI, Google ADK (Gemini natively, other providers such as DeepSeek through LiteLLM)</dd>
+      <dt>Frontend</dt><dd>React, Vite, TypeScript</dd>
+      <dt>Games</dt><dd>Three.js, TypeScript, compiled with <code>tsc</code> and Vite</dd>
+      <dt>Target AWS</dt><dd>CloudFront, S3, ALB, ECS Fargate, SQS + DLQ, DynamoDB, Secrets Manager, VPC endpoints</dd>
+      <dt>Delivery</dt><dd>Docker Compose locally; GitHub Actions CI; Terraform and an OIDC deploy role planned</dd>
+    </dl>
+    <!-- TODO(Fareez): repo / demo link. The repo is private; add a public repo, demo video or live URL here if you want one. -->
+  </section>
+
+<section aria-labelledby="flow-h">
+    <h2 id="flow-h">How a run works</h2>
+    <ol class="points">
+      <li>The browser posts an idea. The API creates the run record, enqueues a job and returns <code>202</code> straight away.</li>
+      <li>The browser opens a Server-Sent Events stream. The API polls storage for new events and forwards them, with a keep-alive every 15 seconds.</li>
+      <li>A worker takes the job and runs the agents: a Producer writes the brief, Gameplay, World and Art specialists run concurrently, a Critic reviews, and the Producer finalises a <code>GameSpec</code>.</li>
+      <li>A Technical Director hands off to a Three.js Builder, which writes the game in TypeScript.</li>
+      <li>The source goes to the offline builder sandbox. QA reviews the real build output, and a Fix Engineer gets at most two correction passes.</li>
+      <li>The built game is published to artifact storage and served from the CDN.</li>
+    </ol>
+  </section>
+<section aria-labelledby="arch-h">
+    <h2 id="arch-h">Target AWS architecture</h2>
+    <figure class="diagram">
+      <div class="diagram-scroll" tabindex="0" role="region" aria-label="Pixel Forge architecture diagram, scrollable">
+<svg viewBox="0 0 900 505" role="img" aria-labelledby="pf-title pf-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="pf-title">Pixel Forge target AWS architecture</title>
+<desc id="pf-desc">The browser reaches one CloudFront distribution over HTTPS. CloudFront serves the single-page app from an S3 bucket by default, sends /api/* to an Application Load Balancer in front of an ECS Fargate API service, and serves /games/* from an S3 artifacts bucket. The API writes runs to DynamoDB, reads events from it, and sends jobs to an SQS queue with a dead-letter queue. A Fargate worker service receives jobs, runs the ADK agents, appends events to DynamoDB, publishes built games to the artifacts bucket, reads model keys from Secrets Manager and calls model providers through NAT. For each build the worker starts a Fargate builder task in isolated subnets with no internet route, which reaches S3 only through VPC endpoints.</desc>
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="group" x="330" y="92" width="364" height="328" rx="10"/>
+<text class="g" x="342" y="110">VPC</text>
+<rect class="zone" x="468" y="118" width="212" height="148" rx="8"/>
+<text class="g" x="478" y="134">PRIVATE SUBNETS</text>
+<rect class="zone" x="468" y="282" width="212" height="124" rx="8"/>
+<text class="g" x="478" y="398">ISOLATED, NO INTERNET ROUTE</text>
+<g class="edges">
+<path class="edge" marker-end="url(#arr)" d="M126 230H164"/>
+<path class="edge" marker-end="url(#arr)" d="M228 207V43H348"/>
+<path class="edge" marker-end="url(#arr)" d="M290 222H316V173H344"/>
+<path class="edge" marker-end="url(#arr)" d="M228 253V485H598"/>
+<path class="edge" marker-end="url(#arr)" d="M450 168H480"/>
+<path class="edge" marker-end="url(#arr)" d="M666 158L726 126"/>
+<path class="edge" marker-end="url(#arr)" d="M666 172L726 186"/>
+<path class="edge" marker-end="url(#arr)" d="M728 198L668 224"/>
+<path class="edge" marker-end="url(#arr)" d="M666 214L726 136"/>
+<path class="edge dash" marker-end="url(#arr)" d="M728 256L668 238"/>
+<path class="edge" marker-end="url(#arr)" d="M666 248L726 312"/>
+<path class="edge" marker-end="url(#arr)" d="M574 252V318"/>
+<path class="edge" marker-end="url(#arr)" d="M666 232H688V444"/>
+<path class="edge" marker-end="url(#arr)" d="M482 343H452"/>
+<path class="edge" marker-end="url(#arr)" d="M398 366V469H598"/>
+</g>
+<g class="labels">
+<text class="e" x="145" y="222" text-anchor="middle">HTTPS</text>
+<text class="e" x="236" y="128">default</text>
+<text class="e" x="236" y="380">/games/*</text>
+<text class="e" x="318" y="198" text-anchor="middle">/api/*</text>
+<text class="e" x="582" y="276">ecs:RunTask</text>
+<text class="e" x="500" y="462" text-anchor="middle">S3 endpoint only</text>
+</g>
+<g class="nodes" text-anchor="middle">
+<rect class="box" x="16" y="207" width="110" height="46" rx="6"/><text class="t" x="71" y="235">Browser</text>
+<rect class="box" x="166" y="207" width="124" height="46" rx="6"/><text class="t" x="228" y="226">CloudFront</text><text class="s" x="228" y="242">one domain</text>
+<rect class="box" x="350" y="20" width="160" height="46" rx="6"/><text class="t" x="430" y="39">S3: SPA bucket</text><text class="s" x="430" y="55">frontend build</text>
+<rect class="box" x="346" y="145" width="104" height="46" rx="6"/><text class="t" x="398" y="173">ALB</text>
+<rect class="box" x="482" y="142" width="184" height="46" rx="6"/><text class="t" x="574" y="161">API (FastAPI)</text><text class="s" x="574" y="177">ECS Fargate service</text>
+<rect class="box" x="482" y="206" width="184" height="46" rx="6"/><text class="t" x="574" y="225">Worker: ADK agents</text><text class="s" x="574" y="241">Fargate, scales on queue depth</text>
+<rect class="box" x="482" y="320" width="184" height="46" rx="6"/><text class="t" x="574" y="339">Builder sandbox</text><text class="s" x="574" y="355">one Fargate task per build</text>
+<rect class="box" x="346" y="320" width="104" height="46" rx="6"/><text class="t" x="398" y="339">Endpoints</text><text class="s" x="398" y="355">S3 · ECR · Logs</text>
+<rect class="box" x="728" y="100" width="156" height="46" rx="6"/><text class="t" x="806" y="119">DynamoDB</text><text class="s" x="806" y="135">runs + events</text>
+<rect class="box" x="728" y="166" width="156" height="46" rx="6"/><text class="t" x="806" y="185">SQS run queue</text><text class="s" x="806" y="201">+ dead-letter queue</text>
+<rect class="box" x="728" y="232" width="156" height="46" rx="6"/><text class="t" x="806" y="251">Secrets Manager</text><text class="s" x="806" y="267">model API keys</text>
+<rect class="ext" x="728" y="298" width="156" height="46" rx="6"/><text class="t" x="806" y="317">Model providers</text><text class="s" x="806" y="333">Gemini / LiteLLM</text>
+<rect class="box" x="600" y="446" width="200" height="46" rx="6"/><text class="t" x="700" y="465">S3: artifacts</text><text class="s" x="700" y="481">games/ · runs/ prefixes</text>
+</g>
+</svg>
+      </div>
+      <figcaption><span class="scroll-hint">Scroll sideways to see the whole diagram. </span>Redrawn from the project's architecture notes. Designed, not yet deployed.</figcaption>
+    </figure>
+    <div class="table-scroll">
+    <table>
+      <thead><tr><th scope="col">Concern</th><th scope="col">AWS</th><th scope="col">Local stand-in</th></tr></thead>
+      <tbody>
+        <tr><td>Static frontend</td><td>S3 + CloudFront</td><td>nginx in the frontend image</td></tr>
+        <tr><td>API</td><td>ECS Fargate behind an ALB</td><td>FastAPI container</td></tr>
+        <tr><td>Job dispatch</td><td>SQS standard queue + DLQ</td><td>Redis list (or in-process queue)</td></tr>
+        <tr><td>Agent runs</td><td>ECS Fargate worker service</td><td>Worker container</td></tr>
+        <tr><td>Runs and events</td><td>DynamoDB, one on-demand table</td><td>SQLite in WAL mode</td></tr>
+        <tr><td>Game bundles</td><td>S3 behind CloudFront</td><td>Directory on a shared volume</td></tr>
+        <tr><td>Untrusted builds</td><td>One Fargate task per build, isolated subnets</td><td><code>network_mode: none</code> builder container</td></tr>
+        <tr><td>Secrets</td><td>Secrets Manager, worker only</td><td><code>.env</code>, worker only</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p class="small muted">One environment variable per concern picks the implementation. A compose overlay runs the real boto3 code paths against a local moto server, and CI runs the end-to-end smoke test in both modes.</p>
+  </section>
+<section aria-labelledby="sandbox-h">
+    <h2 id="sandbox-h">Treating AI-written code as untrusted</h2>
+    <p>A prompt-injected or simply wrong model can write arbitrary TypeScript, so the build step is treated like running code from a stranger.</p>
+    <ul class="points">
+      <li><strong>No network, no credentials.</strong> Builds run offline. On AWS each build task sits in isolated subnets with no internet route, and model keys live only in the worker.</li>
+      <li><strong>Fixed dependencies.</strong> The game scaffold is pinned and baked into the builder image, so nothing is installed at build time.</li>
+      <li><strong>Least privilege and hard limits.</strong> A non-root, read-only environment with CPU, memory and time limits, and a task role that can only reach its own build input and output.</li>
+      <li><strong>Disposable.</strong> One short-lived container per build.</li>
+    </ul>
+  </section>
+<section aria-labelledby="adr-h">
+    <h2 id="adr-h">Key decisions</h2>
+    <dl class="spec spec-wide">
+      <dt>Fargate, not Lambda</dt><dd>A run chains about ten LLM calls and up to three builds, and takes several minutes, sometimes more than fifteen, beyond Lambda's hard limit. The worker autoscales on SQS queue depth, and the same container runs locally.</dd>
+      <dt>SQS between API and workers</dt><dd>Deploys and crashes no longer lose runs, and web and agent capacity scale separately. Delivery is at least once, so the worker is idempotent per run, with a DLQ for poison messages.</dd>
+      <dt>DynamoDB, not RDS</dt><dd>The access pattern is "append an event" and "read events after N". One on-demand table with an atomic per-run counter gives ordered, gap-free events and costs close to nothing at low traffic.</dd>
+      <dt>One CloudFront origin</dt><dd>The app, <code>/api/*</code> and <code>/games/*</code> share one domain: no CORS preflight, one certificate, one WAF attach point.</dd>
+      <dt>Stream by polling storage</dt><dd>Works across processes, replicas and restarts with no extra infrastructure, and replay and resume come free.</dd>
+    </dl>
+  </section>
+<section aria-labelledby="next-h">
+    <h2 id="next-h">What is next</h2>
+    <ul class="points">
+      <li><strong>M2, infrastructure:</strong> Terraform for the VPC and endpoints, ECR, ECS, ALB, SQS, DynamoDB, S3 with OAC, CloudFront, Secrets Manager, IAM and CloudWatch alarms.</li>
+      <li><strong>M3, delivery:</strong> GitHub Actions with an OIDC deploy role, image push to ECR, <code>terraform plan</code> on pull requests, deploy on merge.</li>
+      <li><strong>Later:</strong> auth and per-user quotas, serving generated games from a separate origin, OpenTelemetry tracing, load tests for the streaming path.</li>
+    </ul>
+    <p><a href="./#cloud">← Back to all projects</a></p>
+  </section>
+</main>
+<footer class="site">
+  <div class="wrap">
+    <p>Hosted on GitHub Pages. No trackers, no cookies, no JavaScript.</p>
+  </div>
+</footer>
+</body>
+</html>

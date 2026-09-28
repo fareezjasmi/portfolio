@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mohamad Fareez Bin Jasmi · Cloud / Platform Engineer (in progress) · Flutter, iOS &amp; Android developer</title>
+<meta name="description" content="Mohamad Fareez Bin Jasmi, a Flutter, iOS and Android developer in Malaysia moving into cloud and platform engineering. Pixel Forge, FoundIt, Memori and other projects.">
+<meta name="author" content="Mohamad Fareez Bin Jasmi">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f7f7f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1112" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://fareezjasmi.github.io/portfolio/">
+<!-- TODO(Fareez): add og:image / twitter:image (absolute URL, 1200x630) once there is a photo or card image. -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://fareezjasmi.github.io/portfolio/">
+<meta property="og:title" content="Mohamad Fareez Bin Jasmi · Cloud / Platform Engineer (in progress)">
+<meta property="og:description" content="Flutter, iOS and Android developer in Malaysia moving into cloud and platform engineering. I build things and ship them to production.">
+<meta property="og:locale" content="en_MY">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="v-b">
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="wrap"><nav class="nav" aria-label="Primary"><a class="home" href="./">Fareez Jasmi</a><a href="#cloud">Cloud</a><a href="#mobile">Mobile</a><a href="#learning">Learning</a><a href="#contact">Contact</a></nav></div>
+</header>
+<main id="main" class="wrap">
+  <section class="hero" aria-labelledby="name">
+    <h1 id="name">Mohamad Fareez Bin Jasmi</h1>
+    <p class="lede">Flutter, iOS and Android developer in Malaysia, moving into cloud and platform engineering. I build things and ship them to production.</p>
+    <dl class="spec hero-spec">
+      <!-- TODO(Fareez): bio row. Restore as: <dt>bio</dt><dd>2–3 sentences in your own words</dd> -->
+      <!-- TODO(Fareez): photo row (optional). Restore as: <dt>photo</dt><dd><img src="fareez.jpg" alt="..."></dd> -->
+      <dt>focus</dt><dd>Working across AWS cloud, system design, AI agents (Google ADK), Flutter, iOS and game development.</dd>
+    </dl>
+  </section>
+
+  <section id="cloud" aria-labelledby="cloud-h">
+    <p class="eyebrow">cloud / platform</p>
+    <h2 id="cloud-h">Cloud and platform work</h2>
+    <article class="card" aria-labelledby="pf-h">
+  <header class="card-h"><h3 id="pf-h"><a href="pixel-forge.html">Pixel Forge</a></h3><span class="tag wip">in progress</span></header>
+  <p>A team of AI agents that turns a one-paragraph game idea into a playable Three.js game. The agents design the game, write TypeScript, compile it and review the build, and the browser shows every step live.</p>
+  <dl class="spec">
+      <dt>status</dt><dd>In progress</dd>
+      <dt>stack</dt><dd>FastAPI · Google ADK · Gemini / LiteLLM · React + Vite + TypeScript · Docker Compose</dd>
+      <dt>infra</dt><dd>ECS Fargate · SQS · DynamoDB · S3 + CloudFront · Terraform</dd>
+      <dt>docs</dt><dd><a href="pixel-forge.html">Architecture and decisions →</a></dd>
+      <!-- TODO(Fareez): repo / demo row. The repo is private; add <dt>repo</dt><dd>link</dd> when there is a public repo or demo. -->
+  </dl>
+  <ul class="points">
+        <li><strong>Stateless API, separate workers.</strong> Posting a run writes a record and puts a job on a queue. A worker fleet runs the agents and writes every event to the database, so any API replica can serve the live stream and it survives restarts.</li>
+        <li><strong>Sandboxed builds for AI-written code.</strong> Agent code is compiled in a separate builder with no network, no credentials, a read-only filesystem, a non-root user and hard resource limits. On AWS each build is its own Fargate task in isolated subnets with no internet route.</li>
+        <li><strong>Local stack that mirrors AWS.</strong> Every AWS service has a local stand-in behind the same interface (SQLite and files for DynamoDB and S3, Redis for SQS, a <code>--network none</code> container for the Fargate task). CI runs the end-to-end test against both, including the real AWS code paths on a moto server, with no AWS account.</li>
+        <li><strong>Written design decisions.</strong> ADRs cover Fargate over Lambda, SQS between API and workers, single-table DynamoDB over RDS, and one CloudFront origin for the app, API and games.</li>
+      </ul>
+<figure class="diagram ">
+<div class="diagram-scroll" tabindex="0" role="region" aria-label="Pixel Forge architecture diagram, scrollable">
+<svg viewBox="0 0 900 505" role="img" aria-labelledby="pf-title pf-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="pf-title">Pixel Forge target AWS architecture</title>
+<desc id="pf-desc">The browser reaches one CloudFront distribution over HTTPS. CloudFront serves the single-page app from an S3 bucket by default, sends /api/* to an Application Load Balancer in front of an ECS Fargate API service, and serves /games/* from an S3 artifacts bucket. The API writes runs to DynamoDB, reads events from it, and sends jobs to an SQS queue with a dead-letter queue. A Fargate worker service receives jobs, runs the ADK agents, appends events to DynamoDB, publishes built games to the artifacts bucket, reads model keys from Secrets Manager and calls model providers through NAT. For each build the worker starts a Fargate builder task in isolated subnets with no internet route, which reaches S3 only through VPC endpoints.</desc>
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="group" x="330" y="92" width="364" height="328" rx="10"/>
+<text class="g" x="342" y="110">VPC</text>
+<rect class="zone" x="468" y="118" width="212" height="148" rx="8"/>
+<text class="g" x="478" y="134">PRIVATE SUBNETS</text>
+<rect class="zone" x="468" y="282" width="212" height="124" rx="8"/>
+<text class="g" x="478" y="398">ISOLATED, NO INTERNET ROUTE</text>
+<g class="edges">
+<path class="edge" marker-end="url(#arr)" d="M126 230H164"/>
+<path class="edge" marker-end="url(#arr)" d="M228 207V43H348"/>
+<path class="edge" marker-end="url(#arr)" d="M290 222H316V173H344"/>
+<path class="edge" marker-end="url(#arr)" d="M228 253V485H598"/>
+<path class="edge" marker-end="url(#arr)" d="M450 168H480"/>
+<path class="edge" marker-end="url(#arr)" d="M666 158L726 126"/>
+<path class="edge" marker-end="url(#arr)" d="M666 172L726 186"/>
+<path class="edge" marker-end="url(#arr)" d="M728 198L668 224"/>
+<path class="edge" marker-end="url(#arr)" d="M666 214L726 136"/>
+<path class="edge dash" marker-end="url(#arr)" d="M728 256L668 238"/>
+<path class="edge" marker-end="url(#arr)" d="M666 248L726 312"/>
+<path class="edge" marker-end="url(#arr)" d="M574 252V318"/>
+<path class="edge" marker-end="url(#arr)" d="M666 232H688V444"/>
+<path class="edge" marker-end="url(#arr)" d="M482 343H452"/>
+<path class="edge" marker-end="url(#arr)" d="M398 366V469H598"/>
+</g>
+<g class="labels">
+<text class="e" x="145" y="222" text-anchor="middle">HTTPS</text>
+<text class="e" x="236" y="128">default</text>
+<text class="e" x="236" y="380">/games/*</text>
+<text class="e" x="318" y="198" text-anchor="middle">/api/*</text>
+<text class="e" x="582" y="276">ecs:RunTask</text>
+<text class="e" x="500" y="462" text-anchor="middle">S3 endpoint only</text>
+</g>
+<g class="nodes" text-anchor="middle">
+<rect class="box" x="16" y="207" width="110" height="46" rx="6"/><text class="t" x="71" y="235">Browser</text>
+<rect class="box" x="166" y="207" width="124" height="46" rx="6"/><text class="t" x="228" y="226">CloudFront</text><text class="s" x="228" y="242">one domain</text>
+<rect class="box" x="350" y="20" width="160" height="46" rx="6"/><text class="t" x="430" y="39">S3: SPA bucket</text><text class="s" x="430" y="55">frontend build</text>
+<rect class="box" x="346" y="145" width="104" height="46" rx="6"/><text class="t" x="398" y="173">ALB</text>
+<rect class="box" x="482" y="142" width="184" height="46" rx="6"/><text class="t" x="574" y="161">API (FastAPI)</text><text class="s" x="574" y="177">ECS Fargate service</text>
+<rect class="box" x="482" y="206" width="184" height="46" rx="6"/><text class="t" x="574" y="225">Worker: ADK agents</text><text class="s" x="574" y="241">Fargate, scales on queue depth</text>
+<rect class="box" x="482" y="320" width="184" height="46" rx="6"/><text class="t" x="574" y="339">Builder sandbox</text><text class="s" x="574" y="355">one Fargate task per build</text>
+<rect class="box" x="346" y="320" width="104" height="46" rx="6"/><text class="t" x="398" y="339">Endpoints</text><text class="s" x="398" y="355">S3 · ECR · Logs</text>
+<rect class="box" x="728" y="100" width="156" height="46" rx="6"/><text class="t" x="806" y="119">DynamoDB</text><text class="s" x="806" y="135">runs + events</text>
+<rect class="box" x="728" y="166" width="156" height="46" rx="6"/><text class="t" x="806" y="185">SQS run queue</text><text class="s" x="806" y="201">+ dead-letter queue</text>
+<rect class="box" x="728" y="232" width="156" height="46" rx="6"/><text class="t" x="806" y="251">Secrets Manager</text><text class="s" x="806" y="267">model API keys</text>
+<rect class="ext" x="728" y="298" width="156" height="46" rx="6"/><text class="t" x="806" y="317">Model providers</text><text class="s" x="806" y="333">Gemini / LiteLLM</text>
+<rect class="box" x="600" y="446" width="200" height="46" rx="6"/><text class="t" x="700" y="465">S3: artifacts</text><text class="s" x="700" y="481">games/ · runs/ prefixes</text>
+</g>
+</svg>
+</div>
+<figcaption><span class="scroll-hint">Scroll sideways to see the whole diagram. </span>Target AWS architecture, redrawn from the project's architecture notes. The application and its local stand-ins are built; Terraform and the AWS deploy are the next milestones.</figcaption>
+</figure>
+</article>
+  </section>
+
+  <section id="mobile" aria-labelledby="mobile-h">
+    <p class="eyebrow">mobile and product</p>
+    <h2 id="mobile-h">Mobile apps</h2>
+    <div class="grid2">
+    <article class="card" aria-labelledby="fi-h">
+  <header class="card-h"><h3 id="fi-h">FoundIt</h3><span class="tag live">live on google play</span></header>
+  <p>Save your favourite places from TikTok, YouTube and other links. Share a social link to the app and it extracts the places mentioned in it.</p>
+  <dl class="spec">
+      <dt>status</dt><dd>Live on Google Play</dd>
+      <dt>stack</dt><dd>Flutter · Spring Boot API · Python AI service</dd>
+      <dt>store</dt><dd><a href="https://play.google.com/store/apps/details?id=com.wolfdev.foundit">Google Play</a></dd>
+  </dl>
+  
+</article>
+    <article class="card" aria-labelledby="me-h">
+  <header class="card-h"><h3 id="me-h">Memori</h3><span class="tag review">in google play review</span></header>
+  <p>A private, on-device keepsake app for parents to capture a child's photos, videos, voice notes, milestones and time-capsule letters. No account and no cloud: family members pair phones on the same WiFi with a 6-digit code and memories sync directly between them.</p>
+  <dl class="spec">
+      <dt>status</dt><dd>In Google Play review</dd>
+      <dt>stack</dt><dd>Flutter · Riverpod · Isar (on-device database) · Android</dd>
+      <!-- TODO(Fareez): store row. Add <dt>store</dt><dd>Google Play link</dd> once Memori is approved. -->
+  </dl>
+  
+</article>
+    </div>
+  </section>
+
+  <section id="other" aria-labelledby="other-h">
+    <p class="eyebrow">other projects</p>
+    <h2 id="other-h">Smaller builds</h2>
+    <div class="grid2">
+    <article class="card" aria-labelledby="jev-h">
+  <header class="card-h"><h3 id="jev-h">JEV Motorsport</h3></header>
+  <p>A web sim.</p>
+  <!-- TODO(Fareez): JEV Motorsport details: one or two sentences on what it simulates, the stack, and a link. -->
+  
+</article>
+    <article class="card" aria-labelledby="sb-h">
+  <header class="card-h"><h3 id="sb-h">Sideways Bound</h3><span class="tag wip">in progress</span></header>
+  <p>A racing game built in Unity.</p>
+  <!-- TODO(Fareez): Sideways Bound details: one sentence on the idea, plus a video or build link if you want one. -->
+  <dl class="spec">
+      <dt>status</dt><dd>In progress</dd>
+      <dt>stack</dt><dd>Unity</dd>
+  </dl>
+  
+</article>
+    </div>
+  </section>
+
+  <section id="learning" aria-labelledby="learning-h">
+    <p class="eyebrow">currently learning</p>
+    <h2 id="learning-h">Working toward</h2>
+    <div class="table-scroll">
+    <table class="plain">
+      <thead><tr><th scope="col">item</th><th scope="col">status</th></tr></thead>
+      <tbody>
+        <tr><td>AWS Certified Cloud Practitioner</td><td>Working toward it. Exam planned for December 2026.</td></tr>
+        <tr><td>AWS course</td><td>Starts 30 September 2026.<!-- TODO(Fareez): optional, add the course name / provider here. --></td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section id="contact" aria-labelledby="contact-h">
+    <p class="eyebrow">contact</p>
+    <h2 id="contact-h">Get in touch</h2>
+    <dl class="spec">
+      <dt>email</dt><dd><a href="mailto:fareezjasmi1@gmail.com">fareezjasmi1@gmail.com</a></dd>
+      <!-- TODO(Fareez): github row: <dt>github</dt><dd><a href="...">...</a></dd> -->
+      <!-- TODO(Fareez): linkedin row: <dt>linkedin</dt><dd><a href="...">...</a></dd> -->
+      <!-- TODO(Fareez): cv row (optional): <dt>cv</dt><dd><a href="cv.pdf">PDF</a></dd> -->
+    </dl>
+  </section>
+</main>
+<footer class="site">
+  <div class="wrap">
+    <p>Hosted on GitHub Pages. No trackers, no cookies, no JavaScript.</p>
+  </div>
+</footer>
+</body>
+</html>

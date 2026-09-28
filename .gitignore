@@ -1,0 +1,17 @@
+# Terraform
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.*
+infra/*.tfvars
+!infra/terraform.tfvars.example
+infra/crash.log
+infra/*.tfplan
+
+# OS / editors
+.DS_Store
+*.swp
+.vscode/
+.idea/
+
+# Node
+node_modules/

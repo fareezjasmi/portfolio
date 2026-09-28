@@ -1,0 +1,79 @@
+name: Deploy to AWS (manual)
+
+# For the planned move from GitHub Pages to AWS (S3 + CloudFront, provisioned by
+# the Terraform in infra/). Manual trigger only, so it never runs or fails on
+# push while the site is served by GitHub Pages. Before using it, apply infra/
+# and set the repository variables listed below.
+on:
+  workflow_dispatch:
+
+# One deploy at a time; a newer run waits for the running one.
+concurrency:
+  group: deploy-aws
+  cancel-in-progress: false
+
+permissions:
+  id-token: write # request the GitHub OIDC token
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # Repository variables (Settings → Secrets and variables → Actions → Variables).
+      # Values come from `terraform output` in infra/. None of them are secrets.
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+      S3_BUCKET: ${{ vars.S3_BUCKET }}
+      CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+    steps:
+      - name: Check configuration
+        run: |
+          missing=0
+          for v in AWS_REGION AWS_ROLE_ARN S3_BUCKET CLOUDFRONT_DISTRIBUTION_ID; do
+            if [ -z "${!v}" ]; then echo "::error::Repository variable $v is not set"; missing=1; fi
+          done
+          exit $missing
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: portfolio-deploy-${{ github.run_id }}
+
+      # Assets are not fingerprinted, so browsers cache them for an hour while
+      # CloudFront keeps them for a day (the invalidation below clears the edge).
+      - name: Sync assets (everything except HTML)
+        run: |
+          aws s3 sync site/ "s3://${S3_BUCKET}/" \
+            --delete \
+            --exclude "*.html" \
+            --cache-control "public, max-age=3600, s-maxage=86400"
+
+      # HTML is revalidated by browsers on every visit; the edge caches it until
+      # the next deploy invalidates it.
+      - name: Sync HTML
+        run: |
+          aws s3 sync site/ "s3://${S3_BUCKET}/" \
+            --exclude "*" \
+            --include "*.html" \
+            --delete \
+            --cache-control "public, max-age=0, s-maxage=86400, must-revalidate" \
+            --content-type "text/html; charset=utf-8"
+
+      - name: Invalidate CloudFront
+        run: |
+          id=$(aws cloudfront create-invalidation \
+            --distribution-id "${CLOUDFRONT_DISTRIBUTION_ID}" \
+            --paths "/*" \
+            --query 'Invalidation.Id' --output text)
+          echo "Invalidation ${id} created"
+          aws cloudfront wait invalidation-completed \
+            --distribution-id "${CLOUDFRONT_DISTRIBUTION_ID}" --id "${id}"
+          echo "Invalidation ${id} completed"

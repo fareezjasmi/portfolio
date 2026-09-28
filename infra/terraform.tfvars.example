@@ -1,0 +1,16 @@
+# Copy to terraform.tfvars (gitignored) and edit.
+
+# The GitHub repository allowed to deploy, as OWNER/REPO.
+github_repository = "fareezjasmi/portfolio"
+
+# aws_region  = "ap-southeast-1"
+# bucket_name = null            # null = generated, e.g. portfolio-site-2026...
+# price_class = "PriceClass_200"
+
+# Set false if your AWS account already has the GitHub OIDC provider.
+# create_github_oidc_provider = true
+
+# Optional custom domain (needs an existing Route 53 public hosted zone).
+# enable_custom_domain = true
+# domain_name          = "example.com"
+# hosted_zone_name     = "example.com"
