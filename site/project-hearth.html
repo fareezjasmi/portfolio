@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project Hearth: goals, stack and architecture · Mohamad Fareez Bin Jasmi</title>
+<meta name="description" content="Project Hearth is a browser civilization sandbox built with TypeScript, Three.js, Vite and Rapier physics: villagers that decide for themselves, an economy, families and town growth, plus a two-civilization conquest mode. Static build, deployed by GitHub Actions to GitHub Pages.">
+<meta name="author" content="Mohamad Fareez Bin Jasmi">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f7f7f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1112" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://fareezjasmi.github.io/portfolio/project-hearth.html">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://fareezjasmi.github.io/portfolio/project-hearth.html">
+<meta property="og:title" content="Project Hearth: goals, stack and architecture">
+<meta property="og:description" content="A browser civilization sandbox with no backend: ten villagers decide their own work, eat, rest, marry and build a town, with a second civilization and physics-driven combat on top.">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="v-b">
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="wrap"><nav class="nav" aria-label="Primary"><a class="home" href="./">Fareez Jasmi</a><a href="./#cloud">Cloud</a><a href="./#mobile">Mobile</a><a href="./#learning">Learning</a><a href="./#contact">Contact</a></nav></div>
+</header>
+<main id="main" class="wrap casestudy">
+<section class="hero" aria-labelledby="title">
+    <p class="eyebrow page-top">case study <span class="tag live">live demo</span></p>
+    <h1 id="title" class="flush">Project Hearth</h1>
+    <p class="lede">A civilization sandbox that runs entirely in one browser tab. Ten villagers decide their own work, eat, rest, marry and raise children while homes, shops and roads get built around them, and a second civilization, conquest objectives and physics-driven combat layer on top in the other mode.</p>
+    <dl class="spec">
+      <dt>Status</dt><dd>Live, both modes playable. Type-check and production build pass; no automated gameplay tests and no balance tuning yet.</dd>
+      <dt>Simulation</dt><dd>TypeScript with no Three.js dependency: people, needs, tasks, navigation and town growth are plain serialisable state</dd>
+      <dt>Frontend</dt><dd>TypeScript, Three.js, Vite. Procedural geometry, no art assets and no asset pipeline</dd>
+      <dt>Physics</dt><dd>Rapier (WASM) driving eleven-part articulated ragdolls, loaded as a separate chunk only when conquest runs</dd>
+      <dt>AI layer, optional</dt><dd>TypeSafe Jev through the official <code>@typesafe-ai/sdk</code>, loopback-only. A deterministic local policy is the default and the fallback</dd>
+      <dt>Delivery</dt><dd>GitHub Actions to GitHub Pages on every push; static build, no backend, no server to keep running</dd>
+      <dt>Demo</dt><dd><a href="https://fareezjasmi.github.io/project-hearth/">fareezjasmi.github.io/project-hearth →</a></dd>
+      <dt>Source</dt><dd><a href="https://github.com/fareezjasmi/project-hearth">github.com/fareezjasmi/project-hearth</a></dd>
+    </dl>
+  </section>
+
+<section aria-labelledby="goals-h">
+    <h2 id="goals-h">What it sets out to do</h2>
+    <ul class="points">
+      <li><strong>Make a simulation interesting without a backend.</strong> Movement, work, resource arithmetic, pathfinding and animation are all solved locally in the tab. Nothing needs an account, a database or a running service, which is what makes a free static deploy honest rather than a compromise.</li>
+      <li><strong>Keep the AI narrow and checkable.</strong> The model never chooses an action freely. The simulation offers a bounded list of feasible action-and-target options, the model returns one of those identifiers plus an urgency score, and the answer is rejected unless it matches an offered option. Everything is validated again against inventory, reservations, reachability and prerequisites before it changes the world.</li>
+      <li><strong>Show the decision, not just its result.</strong> Every choice is labelled by source, and every log entry opens its original input snapshot: the trigger, the options offered, the target chosen, confidence, priority and latency. Failed model requests fall back visibly instead of being smoothed over.</li>
+      <li><strong>Let systems interfere with each other.</strong> Economy, households, growth and combat share one clock and one state. Food shortages stop births, a threatened capital shelters civilians, and a recruited soldier leaves their job and has to be replaced.</li>
+      <li><strong>Keep it honest.</strong> Where something is unbuilt or untested, the page and the README say so instead of implying more than was verified.</li>
+    </ul>
+  </section>
+
+<section aria-labelledby="loop-h">
+    <h2 id="loop-h">How a villager decides</h2>
+    <ol class="points">
+      <li>The simulation advances on a fixed step. Needs, energy, hunger, inventory, reservations and task state machines all move on that same clock, and a pause or a speed change moves the clock, not the rendering.</li>
+      <li>The scheduler decides who is allowed to think. Opportunities are staggered, at most one decision is in flight per person, results that arrive after the situation changed are discarded, and model requests are spaced by at least three real seconds across all ten villagers.</li>
+      <li>The context builder gathers scoped observations: needs, current task, carried inventory, relevant memories and relationships, village priorities and worker coverage. From those it builds the feasible action-and-target candidates, each with a local utility score.</li>
+      <li>The provider answers. The local policy sorts candidates by utility and is always available. When a Jev key is connected and enabled, the request instead goes to the loopback server, which asks the model to choose one offered option and rate urgency.</li>
+      <li>The simulation validates the result against the present state and applies it only at a tick, recording the decision, its source and its snapshot.</li>
+    </ol>
+    <p class="small muted">Local execution never calls a model for movement, work ticks, resource arithmetic, animations or pathfinding. Nothing is awarded because a decision was selected: wood and food have to be harvested or bought by a villager who is actually there.</p>
+  </section>
+
+<section aria-labelledby="arch-h">
+    <h2 id="arch-h">Architecture</h2>
+    <figure class="diagram">
+      <div class="diagram-scroll" tabindex="0" role="region" aria-label="Project Hearth architecture diagram, scrollable">
+<svg viewBox="0 0 900 460" role="img" aria-labelledby="ph-title ph-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="ph-title">Project Hearth architecture</title>
+<desc id="ph-desc">Everything inside the browser zone runs in one static page with no backend: a fixed-clock simulation holds people, tasks, town and navigation state; a decision layer built from the context builder and scheduler offers bounded options and receives an answer either from the deterministic local policy or from the optional Jev provider. A renderer reads simulation state and draws it with Three.js, while Rapier physics runs as a separately loaded chunk for conquest ragdolls. Outside the browser, in a local-development-only zone, a Vite plugin acts as the Jev server, holding a TypeSafe API key in session memory and answering only on loopback. Below both, the delivery band shows the production path: type-check and bundle with tsc and Vite into a static dist directory, built and uploaded by GitHub Actions, then served over HTTPS by GitHub Pages.</desc>
+<defs><marker id="ph-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="group" x="16" y="14" width="672" height="300" rx="10"/>
+<text class="g" x="28" y="32">BROWSER, ONE STATIC PAGE, NO BACKEND</text>
+<rect class="zone" x="700" y="14" width="184" height="300" rx="10"/>
+<text class="g" x="712" y="32">LOCAL DEV ONLY</text>
+<rect class="group" x="16" y="336" width="868" height="96" rx="10"/>
+<text class="g" x="28" y="354">DELIVERY, EVERY PUSH TO MAIN</text>
+<g class="edges">
+<path class="edge" marker-end="url(#ph-arr)" d="M186 148H214"/>
+<path class="edge" marker-end="url(#ph-arr)" d="M364 148H392"/>
+<path class="edge" marker-end="url(#ph-arr)" d="M542 148H570"/>
+<path class="edge dash" marker-end="url(#ph-arr)" d="M310 120V64H392"/>
+<path class="edge dash" marker-end="url(#ph-arr)" d="M542 64H660V148H716"/>
+<path class="edge" marker-end="url(#ph-arr)" d="M792 196V176"/>
+<path class="edge" marker-end="url(#ph-arr)" d="M111 176V192H291V210"/>
+<path class="edge" marker-end="url(#ph-arr)" d="M412 238H386"/>
+<path class="edge" marker-end="url(#ph-arr)" d="M186 396H214"/>
+<path class="edge" marker-end="url(#ph-arr)" d="M364 396H392"/>
+<path class="edge" marker-end="url(#ph-arr)" d="M572 396H600"/>
+</g>
+<g class="labels">
+<text class="e" x="330" y="58">opt-in</text>
+<text class="e" x="646" y="104" text-anchor="end">HTTPS</text>
+<text class="e" x="802" y="190">key</text>
+<text class="e" x="126" y="196">state</text>
+</g>
+<g class="nodes" text-anchor="middle">
+<rect class="box" x="36" y="120" width="150" height="56" rx="6"/><text class="t" x="111" y="142">Simulation</text><text class="s" x="111" y="158">10 Hz fixed clock</text>
+<rect class="box" x="214" y="120" width="150" height="56" rx="6"/><text class="t" x="289" y="142">Decision layer</text><text class="s" x="289" y="158">context, scheduler</text>
+<rect class="box" x="392" y="120" width="150" height="56" rx="6"/><text class="t" x="467" y="142">Local policy</text><text class="s" x="467" y="158">deterministic</text>
+<rect class="box" x="570" y="120" width="118" height="56" rx="6"/><text class="t" x="629" y="142">World actions</text><text class="s" x="629" y="158">checked each tick</text>
+<rect class="box" x="392" y="36" width="150" height="56" rx="6"/><text class="t" x="467" y="58">Jev provider</text><text class="s" x="467" y="74">optional, remote</text>
+<rect class="box" x="196" y="210" width="190" height="56" rx="6"/><text class="t" x="291" y="232">Renderer, Three.js</text><text class="s" x="291" y="248">scene, villagers, props</text>
+<rect class="box" x="412" y="210" width="190" height="56" rx="6"/><text class="t" x="507" y="232">Rapier physics</text><text class="s" x="507" y="248">separate chunk, conquest</text>
+<rect class="box" x="716" y="120" width="152" height="56" rx="6"/><text class="t" x="792" y="142">Jev server</text><text class="s" x="792" y="158">Vite plugin, loopback</text>
+<rect class="box" x="716" y="196" width="152" height="56" rx="6"/><text class="t" x="792" y="218">TypeSafe key</text><text class="s" x="792" y="234">session memory only</text>
+<rect class="box" x="36" y="372" width="150" height="48" rx="6"/><text class="t" x="111" y="394">tsc and Vite</text><text class="s" x="111" y="410">type-check, bundle</text>
+<rect class="box" x="214" y="372" width="150" height="48" rx="6"/><text class="t" x="289" y="394">dist/</text><text class="s" x="289" y="410">2.6 MB static</text>
+<rect class="box" x="392" y="372" width="180" height="48" rx="6"/><text class="t" x="482" y="394">GitHub Actions</text><text class="s" x="482" y="410">npm ci, build, upload</text>
+<rect class="box" x="600" y="372" width="250" height="48" rx="6"/><text class="t" x="725" y="394">GitHub Pages</text><text class="s" x="725" y="410">HTTPS CDN, nothing to run</text>
+</g>
+</svg>
+      </div>
+      <figcaption><span class="scroll-hint">Scroll sideways to see the whole diagram. </span>Every box inside the browser zone runs in one static page. The AI layer is deliberately the only piece that needs a server, and that server is loopback-only, so the hosted demo runs the local policy instead.</figcaption>
+    </figure>
+    <div class="table-scroll">
+    <table>
+      <thead><tr><th scope="col">Layer</th><th scope="col">What is in it</th><th scope="col">Why it is separate</th></tr></thead>
+      <tbody>
+        <tr><td>Simulation</td><td>People and needs, task state machines, grid navigation, households and town growth, conquest gameplay</td><td>No Three.js objects anywhere in it, so the same state can later move into a worker or an authoritative server</td></tr>
+        <tr><td>Decision layer</td><td>Scoped context and candidate building, a scheduler with cooldowns and stale-result rejection, and one provider seam</td><td>One place where a local policy and a remote model are interchangeable, labelled, and budgeted</td></tr>
+        <tr><td>Renderer</td><td>Lighting and day cycle, villagers, inventory props, construction and road views</td><td>It reads simulation state and never drives it, so visuals cannot desync the world</td></tr>
+        <tr><td>Physics</td><td>Rapier joints and rigid bodies for knockdown ragdolls</td><td>Purely cosmetic and separately loaded; a physics failure leaves gameplay intact</td></tr>
+        <tr><td>Interface</td><td>Village dashboard, inspector, decision log, agent view, town view</td><td>Driven by real simulation and scheduler telemetry rather than simulated status animations</td></tr>
+        <tr><td>Jev server</td><td>A Vite plugin that holds the API key and calls the model</td><td>Keeps the credential off the static host entirely, and refuses any request that is not loopback</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+<section aria-labelledby="delivery-h">
+    <h2 id="delivery-h">Delivery and hosting</h2>
+    <ul class="points">
+      <li><strong>Subpath build.</strong> Vite emits root-relative asset URLs by default, which 404 on a GitHub Pages project site. The production build sets <code>base</code> to <code>/project-hearth/</code> while development keeps <code>/</code>, so the loopback server and the usual local URL are unchanged.</li>
+      <li><strong>One workflow, no manual uploads.</strong> A push to <code>main</code> runs Node 22, <code>npm ci</code>, <code>npm run build</code>, uploads the artifact and deploys it. <code>dist/</code> is gitignored and built in CI, so the published bundle cannot silently drift from the source.</li>
+      <li><strong>The AI key path is closed on purpose.</strong> The connection server is loopback-only, so no static host can serve it. The client probes the status endpoint once, and when no server answers it disables key entry and explains why, rather than showing a form that cannot work.</li>
+      <li><strong>Scope, stated plainly.</strong> This is a deploy pipeline, not a mobile release pipeline: no code signing, no matrix builds across platforms and no store uploads yet. Those are the next CI/CD additions rather than things this project already does.</li>
+    </ul>
+  </section>
+
+<section aria-labelledby="limits-h">
+    <h2 id="limits-h">Limitations</h2>
+    <ul class="points">
+      <li><strong>In memory only.</strong> Refreshing resets the village. There is no save, no load, no state transfer between the two modes, and no full generational aging.</li>
+      <li><strong>Compile-checked, not play-tested.</strong> TypeScript and the production build pass, and both modes were verified to load and render in a browser. Balance, emergent behaviour, family growth and the traffic fix were not tuned or playtested, and there are no automated gameplay tests.</li>
+      <li><strong>The AI path itself is unverified end to end</strong>, because it needs a live TypeSafe key to exercise.</li>
+      <li><strong>Conservative crowd navigation.</strong> Walkers may yield or abandon a blocked task before choosing another; it is not a full RTS navigation mesh.</li>
+      <li><strong>Bounded by design.</strong> Twelve memories per villager, the last 120 decisions and 80 world events retained, 45 shown, sixteen decision traces per person, and a cap of forty residents on this map size.</li>
+    </ul>
+  </section>
+
+<section aria-labelledby="adr-h">
+    <h2 id="adr-h">Key decisions</h2>
+    <dl class="spec spec-wide">
+      <dt>Local policy first, model second</dt><dd>The deterministic policy is the default, not a degraded mode. It keeps survival behaviour responsive, removes the latency and cost from the common path, and gives the model a fallback that is already good instead of an error state. Model requests are then a bounded, visible luxury rather than a dependency.</dd>
+      <dt>A bounded choice, not free text</dt><dd>Letting the model name actions and coordinates invites silent invalid states. It receives a scoped option list and returns one identifier plus urgency; the server checks the shape and the offered identifier, and the simulation re-checks feasibility against the world. A malformed or stale answer is discarded.</dd>
+      <dt>The renderer is a consumer</dt><dd>Simulation state holds no Three.js objects. Positions and actions are plain data, so rendering can be swapped, throttled or moved without touching behaviour, which is also what makes the visuals safe to fail.</dd>
+      <dt>Physics is cosmetic</dt><dd>Ragdolls never decide damage or navigation. Combat resolves on the simulation tick; knockdowns are drawn from it. That keeps a 2 MB WebAssembly engine out of the correctness path and lets it load lazily, only for conquest.</dd>
+      <dt>Static hosting without lying about it</dt><dd>The honest static site is the fully playable one. Rather than pretending the AI mode works everywhere, the hosted build detects the missing server and says so, which is cheaper than running a service nobody needs and clearer for anyone clicking the demo.</dd>
+    </dl>
+  </section>
+
+<section aria-labelledby="next-h">
+    <h2 id="next-h">What is next</h2>
+    <ul class="points">
+      <li><strong>Save and load,</strong> which is the prerequisite for everything generational.</li>
+      <li><strong>Automated gameplay tests:</strong> deterministic seeded runs that assert economy and population outcomes, so balance changes stop being eyeballed.</li>
+      <li><strong>A playtesting and balance pass</strong> on family growth, cooperative construction and conquest combat, which are currently compile-checked only.</li>
+      <li><strong>Release engineering,</strong> if this becomes a distributed desktop or mobile build: signing, matrix builds and store tracks, which is the same pipeline work as my mobile projects.</li>
+    </ul>
+    <p><a href="./#other">← Back to all projects</a></p>
+  </section>
+</main>
+<footer class="site">
+  <div class="wrap">
+    <p>Hosted on GitHub Pages. No trackers, no cookies, no JavaScript.</p>
+  </div>
+</footer>
+</body>
+</html>
